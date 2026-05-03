@@ -70,6 +70,11 @@ import {
   renameDayDescription,
   renameDayInputSchema,
 } from "./tools/rename-day.js";
+import {
+  editNote,
+  editNoteDescription,
+  editNoteInputSchema,
+} from "./tools/edit-note.js";
 
 const AUTH_ERROR_RESPONSE = {
   content: [
@@ -269,6 +274,17 @@ export function buildServer(ctx: AppContext): McpServer {
     },
     requireAuth(ctx, async (args) =>
       renameDay(ctx, args as Parameters<typeof renameDay>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_edit_note",
+    {
+      title: "Edit a note in a Wanderlog trip",
+      description: editNoteDescription,
+      inputSchema: editNoteInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      editNote(ctx, args as Parameters<typeof editNote>[1])),
   );
 
   return server;

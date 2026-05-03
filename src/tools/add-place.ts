@@ -7,6 +7,7 @@ import type { PlaceData } from "../types.js";
 import {
   buildPlaceBlock,
   findDaySectionByDate,
+  findListSectionByHeading,
   findPlacesToVisitSection,
   findTripCenter,
   requireUserId,
@@ -29,6 +30,13 @@ export const addPlaceInputSchema = {
     .optional()
     .describe(
       "Optional day to add the place to. Accepts 'day 2', 'May 4', or ISO '2026-05-04'. Omit to add the place to the trip's 'Places to visit' list (unscheduled).",
+    ),
+  list: z
+    .string()
+    .optional()
+    .describe(
+      'Optional custom list name to add the place to (e.g. "Coffee places", "Beer places"). ' +
+      'If provided, "day" is ignored. Omit to use a day or the default "Places to visit" list.',
     ),
   note: z
     .string()
@@ -67,6 +75,7 @@ type Args = {
   trip_key: string;
   place: string;
   day?: string;
+  list?: string;
   note?: string;
   start_time?: string;
   end_time?: string;
@@ -84,7 +93,23 @@ export async function addPlace(
     // Resolve target section
     let targetIndex: number;
     let targetLabel: string;
-    if (args.day) {
+    if (args.list) {
+      // Custom list — e.g. "Coffee places", "Beer places"
+      const listSection = findListSectionByHeading(trip, args.list);
+      if (!listSection) {
+        // List available placeList sections to help the user
+        const available = trip.itinerary.sections
+          .filter((s) => s.type === "normal" && s.mode === "placeList")
+          .map((s) => s.heading || "Places to visit");
+        throw new WanderlogValidationError(
+          `No list named "${args.list}" found in trip "${trip.title}". ` +
+          `Available lists: ${available.join(", ")}. ` +
+          `Create the list in the Wanderlog UI first, then retry.`,
+        );
+      }
+      targetIndex = listSection.index;
+      targetLabel = listSection.section.heading;
+    } else if (args.day) {
       const daySection = resolveDay(trip, args.day);
       const found = findDaySectionByDate(trip, daySection.date!);
       if (!found) {
@@ -100,7 +125,7 @@ export async function addPlace(
         throw new WanderlogError(
           "Trip has no 'Places to visit' list",
           "no_places_section",
-          "This is unexpected — Wanderlog usually creates one automatically. Try adding to a specific day instead.",
+          "Try adding to a specific day or list instead.",
         );
       }
       targetIndex = places.index;

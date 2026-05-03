@@ -15,6 +15,10 @@ The agent calls the tools, interleaves places and notes for each day, adds hotel
 
 **See a real example:** [14-day Japan Golden Route](https://wanderlog.com/view/dmvegdhqsa/japan-golden-route--tokyo--hakone--kyoto--nara--osaka) — built entirely by an AI agent using this MCP server.
 
+## What's New in v0.3.0
+
+- `wanderlog_edit_note` — edit or clear any note in a trip. Works for both inline place notes (`place: "Sensō-ji"`) and standalone note blocks (`note_ref: "1st note on day 3"`). Standalone notes had no edit path before this.
+
 ## What's New in v0.2.0
 
 - `wanderlog_rename_day` — replace auto-generated day headings (e.g. `"Barcelona"`) with descriptive ones (`"Arrival — Feria de Abril"`). Pass `""` to reset back to the default.
@@ -60,6 +64,12 @@ and a ryokan in Shinjuku."
 ```
 "Remove the Colosseum from day 2 of my Rome trip."
 ```
+```
+"Update the note on Sensō-ji in my Japan trip — add that you need to arrive before 9am."
+```
+```
+"The transit note on day 3 of my Lisbon trip is wrong — change it to 'Take tram 28 from Alfama'."
+```
 
 ## Tools
 
@@ -76,6 +86,7 @@ and a ryokan in Shinjuku."
 | `wanderlog_add_checklist` | Add a pre-trip or per-day checklist |
 | `wanderlog_add_expense` | Log a budget expense (amount, category, currency) linked to a place |
 | `wanderlog_annotate_place` | Update an existing place with a note, start/end time, or both |
+| `wanderlog_edit_note` | Edit or clear a note — inline place note or standalone note block |
 | `wanderlog_remove_place` | Remove a place by natural-language reference |
 | `wanderlog_update_trip_dates` | Change a trip's date range |
 | `wanderlog_rename_day` | Rename a day's heading (e.g. `"Barcelona"` → `"Arrival — Feria de Abril"`) |

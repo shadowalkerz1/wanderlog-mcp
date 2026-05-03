@@ -130,6 +130,7 @@ export class ShareDBClient extends EventEmitter {
       }, 10_000);
 
       ws.on("open", () => {
+        if (this.ws !== ws) return; // superseded by reconnect
         this.send({ a: "hs", id: null, protocol: 1, protocolMinor: 2 });
       });
 
@@ -147,6 +148,7 @@ export class ShareDBClient extends EventEmitter {
 
       ws.on("close", (code: number) => {
         clearTimeout(handshakeTimeout);
+        if (this.ws !== ws) return; // stale connection, new one already active
         const wasSubscribed = this.subscribed;
         this.handshakeComplete = false;
         this.subscribed = false;
@@ -276,7 +278,9 @@ export class ShareDBClient extends EventEmitter {
       this.doConnect()
         .then(() => {
           if (resubscribe) {
-            void this.subscribe().then(() => this.emit("reconnected"));
+            void this.subscribe()
+              .then(() => this.emit("reconnected"))
+              .catch(() => this.scheduleReconnect(resubscribe));
           } else {
             this.emit("reconnected");
           }

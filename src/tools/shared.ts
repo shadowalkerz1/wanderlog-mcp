@@ -145,6 +145,28 @@ export function findPlacesToVisitSection(trip: TripPlan): {
   return null;
 }
 
+/**
+ * Finds a custom placeList section by heading (case-insensitive fuzzy match).
+ * Works for user-created lists like "Coffee places", "Beer places", etc.
+ */
+export function findListSectionByHeading(
+  trip: TripPlan,
+  heading: string,
+): { index: number; section: Section } | null {
+  const needle = heading.toLowerCase();
+  for (let i = 0; i < trip.itinerary.sections.length; i++) {
+    const s = trip.itinerary.sections[i]!;
+    if (
+      s.type === "normal" &&
+      s.mode === "placeList" &&
+      s.heading.toLowerCase() === needle
+    ) {
+      return { index: i, section: s };
+    }
+  }
+  return null;
+}
+
 /** Finds the first hotels-type section in the trip. */
 export function findHotelsSection(trip: TripPlan): {
   index: number;
