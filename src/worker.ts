@@ -123,12 +123,30 @@ interface Env {
   WANDERLOG_COOKIE?: string;
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, MCP-Protocol-Version",
+  "Access-Control-Max-Age": "86400",
+};
+
+function withCors(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     const { pathname } = new URL(request.url);
 
     if (pathname === "/health") {
-      return Response.json({ status: "ok" });
+      return withCors(Response.json({ status: "ok" }));
     }
 
     if (pathname !== "/mcp") {
@@ -137,7 +155,7 @@ export default {
 
     const cookieRaw = env.WANDERLOG_COOKIE;
     if (!cookieRaw) {
-      return Response.json(
+      return withCors(Response.json(
         {
           jsonrpc: "2.0",
           error: {
@@ -148,7 +166,7 @@ export default {
           id: null,
         },
         { status: 500 },
-      );
+      ));
     }
 
     let ctx: AppContext;
@@ -157,14 +175,14 @@ export default {
     } catch (err) {
       const msg =
         err instanceof WanderlogError ? err.toUserMessage() : (err as Error).message;
-      return Response.json(
+      return withCors(Response.json(
         {
           jsonrpc: "2.0",
           error: { code: -32000, message: `Authentication failed: ${msg}` },
           id: null,
         },
         { status: 403 },
-      );
+      ));
     }
 
     const server = buildServer(ctx);
@@ -175,7 +193,7 @@ export default {
 
     try {
       await server.connect(transport);
-      return await transport.handleRequest(request);
+      return withCors(await transport.handleRequest(request));
     } finally {
       ctx.pool.closeAll();
       await transport.close();

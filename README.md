@@ -18,6 +18,8 @@ The agent calls the tools, interleaves places and notes for each day, adds hotel
 ## What's New in v0.3.0
 
 - `wanderlog_edit_note` — edit or clear any note in a trip. Works for both inline place notes (`place: "Sensō-ji"`) and standalone note blocks (`note_ref: "1st note on day 3"`). Standalone notes had no edit path before this.
+- **Cloudflare Workers deployment** — self-host on Cloudflare's free tier (100k req/day, always-on) and connect from Claude.ai, Cursor, or any HTTP MCP client without running anything locally. See [Hosted deployment (Cloudflare Workers)](#hosted-deployment-cloudflare-workers) below.
+- Custom list support in `wanderlog_add_place` — add places directly to user-created lists like "Coffee places" or "Beer places" using the `list` parameter.
 
 ## What's New in v0.2.0
 
@@ -93,9 +95,9 @@ and a ryokan in Shinjuku."
 
 ## Prerequisites
 
-- **Node.js 22 or newer**
 - **A [Wanderlog](https://wanderlog.com) account**
-- An MCP-compatible client: Claude Code, Claude Desktop, OpenAI Codex, Cursor, VS Code, or any stdio MCP host
+- **Node.js 22+** — only needed for local (stdio) setup; not required for Cloudflare Workers deployment
+- An MCP-compatible client: Claude.ai, Claude Code, Claude Desktop, Cursor, VS Code, OpenAI Codex, or any stdio/HTTP MCP host
 
 ## Setup
 
@@ -124,6 +126,81 @@ Wanderlog doesn't have a public API, so wanderlog-mcp authenticates using your b
 
 > **Why can't I use `document.cookie` in the console?**
 > Wanderlog sets `connect.sid` with the `HttpOnly` flag, which deliberately blocks JavaScript from reading it (XSS protection). DevTools bypasses this restriction — that's why it works and the console doesn't.
+
+### Step 2 — Choose: local or hosted
+
+There are two ways to run wanderlog-mcp:
+
+| | Local (stdio) | Hosted (Cloudflare Workers) |
+|---|---|---|
+| **Works with** | Claude Code, Claude Desktop, Cursor, VS Code | Claude.ai, Cursor, any HTTP MCP client |
+| **Requires** | Node.js 22+ on your machine | A free Cloudflare account |
+| **Cookie stored** | In your MCP client config (local) | As a Cloudflare Worker secret (encrypted) |
+| **Cost** | Free | Free (100k req/day) |
+
+---
+
+## Hosted deployment (Cloudflare Workers)
+
+Use this if you want to connect from **Claude.ai** or any MCP client that connects over HTTP rather than launching a local process.
+
+### Prerequisites
+- A free [Cloudflare account](https://cloudflare.com) (no credit card required)
+- Node.js + this repo cloned locally (only needed once for the deploy step)
+
+### Deploy
+
+**1. Clone the repo and install dependencies**
+
+```bash
+git clone https://github.com/shadowalkerz1/wanderlog-mcp.git
+cd wanderlog-mcp
+npm install
+```
+
+**2. Log in to Cloudflare**
+
+```bash
+npx wrangler login
+```
+
+**3. Store your cookie as an encrypted secret**
+
+```bash
+npx wrangler secret put WANDERLOG_COOKIE
+```
+
+Paste the `connect.sid` value from Step 1 when prompted. It's stored encrypted in Cloudflare and never touches your code or git history.
+
+**4. Deploy**
+
+```bash
+npm run deploy
+```
+
+You'll get a URL like `https://wanderlog-mcp.<your-subdomain>.workers.dev`.
+
+### Connect Claude.ai
+
+1. Go to **Claude.ai → Settings → Integrations**
+2. Click **Add custom integration**
+3. Enter your URL: `https://wanderlog-mcp.<your-subdomain>.workers.dev/mcp`
+4. Save
+
+Ask *"What trips do I have in Wanderlog?"* to confirm it's working.
+
+### Refreshing your cookie (hosted)
+
+When the cookie expires, update the secret and redeploy:
+
+```bash
+npx wrangler secret put WANDERLOG_COOKIE
+npm run deploy
+```
+
+---
+
+## Local setup
 
 ### Step 2 — Configure your MCP client
 
@@ -228,7 +305,8 @@ The cookie lasts about a year but can die sooner if you log out of wanderlog.com
 
 > **Wanderlog session invalid or expired** — Capture a fresh connect.sid cookie from wanderlog.com DevTools and update WANDERLOG_COOKIE in your MCP config.
 
-Repeat Step 1 above, update your config, and restart your MCP client.
+- **Local setup:** update `WANDERLOG_COOKIE` in your MCP client config and restart the client.
+- **Hosted setup:** run `npx wrangler secret put WANDERLOG_COOKIE` then `npm run deploy`.
 
 ## Troubleshooting
 
@@ -238,15 +316,19 @@ Your cookie is expired or wrong. Re-capture it from DevTools and update your con
 **`npx wanderlog-mcp` hangs or does nothing**
 The server speaks stdio MCP — it's designed to be launched by an MCP host, not run directly in a terminal. Run it through Claude Code or Claude Desktop as described above.
 
+**Claude.ai says "Couldn't reach the MCP server"**
+Make sure you deployed the latest version (`npm run deploy`) and that the URL ends in `/mcp`. The Worker needs CORS headers — these are included in v0.3.0+.
+
 **Tools work but the agent ignores notes/checklists**
 The server injects instructions into the MCP `initialize` response that tell the agent to interleave places and notes and add checklists. This works reliably with Claude. Other clients may vary.
 
 ## Security
 
-- The cookie is stored only in your MCP client config, never committed or logged
-- wanderlog-mcp runs entirely on your machine — there's no relay server
+- The cookie value never appears in logs, tool responses, or error messages
+- **Local mode:** cookie lives only in your MCP client config on your machine; the server never phones home
+- **Hosted mode:** cookie is stored as an encrypted Cloudflare Worker secret; it's never in source code or git history; requests go through Cloudflare's infrastructure
 - The startup auth probe validates your cookie without printing its value
-- To revoke access: log out of wanderlog.com (invalidates all sessions), then re-capture
+- To revoke access: log out of wanderlog.com (invalidates all sessions), then re-capture a fresh cookie
 
 ## Contributing
 
