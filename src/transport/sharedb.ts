@@ -1,11 +1,65 @@
 import { EventEmitter } from "node:events";
-import WebSocket from "ws";
+import NodeWebSocket from "ws";
 import type { Config } from "../config.js";
 import { WanderlogAuthError, WanderlogError } from "../errors.js";
 import type { Json0Op } from "../ot/apply.js";
 import type { TripPlan } from "../types.js";
 
 export type { Json0Op };
+
+/**
+ * Minimal WebSocket interface compatible with both the `ws` npm package
+ * (Node.js) and the native WebSocket available in Cloudflare Workers.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface WsLike {
+  addEventListener(type: string, listener: (event: any) => void): void;
+  send(data: string): void;
+  close(): void;
+  readonly readyState: number;
+}
+
+/** Factory that creates a platform-specific WebSocket with the given headers. */
+export type WsFactory = (url: string, headers: Record<string, string>) => WsLike;
+
+/**
+ * Default factory for Node.js — uses the `ws` npm package.
+ * Translates `unexpected-response` (Node.js-only event) into an `error` event
+ * so callers can use a single addEventListener-based API.
+ */
+export function createNodeWebSocket(url: string, headers: Record<string, string>): WsLike {
+  const raw = new NodeWebSocket(url, { headers });
+
+  raw.on("unexpected-response", (_req: unknown, res: { statusCode: number }) => {
+    const err =
+      res.statusCode === 401 || res.statusCode === 403
+        ? new WanderlogAuthError()
+        : new WanderlogError(
+            `WebSocket upgrade failed: ${res.statusCode}`,
+            "ws_upgrade_failed",
+          );
+    raw.emit("error", err);
+  });
+
+  return {
+    addEventListener(type: string, listener: (event: any) => void): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (type === "open") {
+        raw.on("open", listener);
+      } else if (type === "message") {
+        raw.on("message", (data: Buffer | string) =>
+          listener({ data: typeof data === "string" ? data : data.toString() }),
+        );
+      } else if (type === "close") {
+        raw.on("close", (code: number) => listener({ code }));
+      } else if (type === "error") {
+        raw.on("error", (err: Error) => listener({ error: err }));
+      }
+    },
+    send(data: string): void { raw.send(data); },
+    close(): void { raw.close(); },
+    get readyState() { return raw.readyState; },
+  };
+}
 
 type InitFrame = {
   a: "init";
@@ -57,7 +111,7 @@ export interface ShareDBClient {
  * pushed by the server from other clients.
  */
 export class ShareDBClient extends EventEmitter {
-  private ws?: WebSocket;
+  private ws?: WsLike;
   private sessionId?: string;
   private handshakeComplete = false;
   private closedByUser = false;
@@ -79,6 +133,7 @@ export class ShareDBClient extends EventEmitter {
   constructor(
     private readonly config: Config,
     private readonly tripKey: string,
+    private readonly wsFactory: WsFactory = createNodeWebSocket,
   ) {
     super();
   }
@@ -114,12 +169,10 @@ export class ShareDBClient extends EventEmitter {
 
   private doConnect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(this.url(), {
-        headers: {
-          Cookie: this.config.cookieHeader,
-          Origin: this.config.baseUrl,
-          "User-Agent": this.config.userAgent,
-        },
+      const ws = this.wsFactory(this.url(), {
+        Cookie: this.config.cookieHeader,
+        Origin: this.config.baseUrl,
+        "User-Agent": this.config.userAgent,
       });
       this.ws = ws;
       this.handshakeComplete = false;
@@ -129,16 +182,15 @@ export class ShareDBClient extends EventEmitter {
         ws.close();
       }, 10_000);
 
-      ws.on("open", () => {
+      ws.addEventListener("open", () => {
         if (this.ws !== ws) return; // superseded by reconnect
         this.send({ a: "hs", id: null, protocol: 1, protocolMinor: 2 });
       });
 
-      ws.on("message", (raw) => {
-        const text = raw.toString();
+      ws.addEventListener("message", ({ data }: { data: string }) => {
         let msg: unknown;
         try {
-          msg = JSON.parse(text);
+          msg = JSON.parse(data);
         } catch {
           return;
         }
@@ -146,7 +198,7 @@ export class ShareDBClient extends EventEmitter {
         this.handleFrame(msg as Frame & { error?: unknown }, handshakeTimeout, resolve);
       });
 
-      ws.on("close", (code: number) => {
+      ws.addEventListener("close", ({ code }: { code: number }) => {
         clearTimeout(handshakeTimeout);
         if (this.ws !== ws) return; // stale connection, new one already active
         const wasSubscribed = this.subscribed;
@@ -161,23 +213,9 @@ export class ShareDBClient extends EventEmitter {
         }
       });
 
-      ws.on("unexpected-response", (_req, res) => {
+      ws.addEventListener("error", ({ error }: { error?: Error }) => {
         clearTimeout(handshakeTimeout);
-        if (res.statusCode === 401 || res.statusCode === 403) {
-          reject(new WanderlogAuthError());
-        } else {
-          reject(
-            new WanderlogError(
-              `WebSocket upgrade failed: ${res.statusCode}`,
-              "ws_upgrade_failed",
-            ),
-          );
-        }
-      });
-
-      ws.on("error", (err: Error) => {
-        clearTimeout(handshakeTimeout);
-        if (!this.handshakeComplete) reject(err);
+        if (!this.handshakeComplete) reject(error ?? new WanderlogError("WebSocket error", "ws_error"));
       });
     });
   }
@@ -290,7 +328,7 @@ export class ShareDBClient extends EventEmitter {
   }
 
   private send(obj: unknown): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    if (!this.ws || this.ws.readyState !== 1) {
       throw new WanderlogError(
         "WebSocket is not open — cannot send frame",
         "ws_not_open",
@@ -391,12 +429,15 @@ export class ShareDBClient extends EventEmitter {
 export class ShareDBPool {
   private readonly clients = new Map<string, ShareDBClient>();
 
-  constructor(private readonly config: Config) {}
+  constructor(
+    private readonly config: Config,
+    private readonly wsFactory: WsFactory = createNodeWebSocket,
+  ) {}
 
   get(tripKey: string): ShareDBClient {
     let client = this.clients.get(tripKey);
     if (!client) {
-      client = new ShareDBClient(this.config, tripKey);
+      client = new ShareDBClient(this.config, tripKey, this.wsFactory);
       this.clients.set(tripKey, client);
     }
     return client;

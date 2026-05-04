@@ -40,7 +40,9 @@
     "test:all": "npm run test && npm run test:integration",
     "typecheck": "tsc --noEmit",
     "eval": "node --env-file=.env --import tsx evals/run.ts",
-    "start:http": "node --env-file=.env dist/http.js"
+    "start:http": "node --env-file=.env dist/http.js",
+    "dev:worker": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -49,10 +51,12 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@cloudflare/workers-types": "^4.20260504.1",
     "@types/node": "^22.10.2",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "wrangler": "^4.87.0"
   }
 }

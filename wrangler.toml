@@ -1,0 +1,10 @@
+name = "wanderdog"
+main = "src/worker.ts"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# WANDERLOG_COOKIE is a secret — never put it here.
+# Set it once with: npx wrangler secret put WANDERLOG_COOKIE
+
+[observability]
+enabled = true
