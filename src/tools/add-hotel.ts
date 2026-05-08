@@ -27,6 +27,24 @@ export const addHotelInputSchema = {
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD")
     .describe("Check-out date, YYYY-MM-DD. Must be after check_in."),
+  confirmation_number: z
+    .string()
+    .optional()
+    .describe("Optional booking confirmation / reference number."),
+  traveler_names: z
+    .array(z.string())
+    .optional()
+    .describe("Optional list of guest names for this booking."),
+  check_in_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "must be HH:mm")
+    .optional()
+    .describe("Optional check-in time in HH:mm format (e.g. '15:00')."),
+  check_out_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "must be HH:mm")
+    .optional()
+    .describe("Optional check-out time in HH:mm format (e.g. '11:00')."),
 };
 
 export const addHotelDescription = `
@@ -41,6 +59,10 @@ type Args = {
   hotel: string;
   check_in: string;
   check_out: string;
+  confirmation_number?: string;
+  traveler_names?: string[];
+  check_in_time?: string;
+  check_out_time?: string;
 };
 
 export async function addHotel(
@@ -85,41 +107,78 @@ export async function addHotel(
       hotel: {
         checkIn: args.check_in,
         checkOut: args.check_out,
-        travelerNames: [],
-        confirmationNumber: null,
+        travelerNames: args.traveler_names ?? [],
+        confirmationNumber: args.confirmation_number ?? null,
       },
     });
 
     const existing = findHotelsSection(trip);
-    const ops: Json0Op[] = existing
-      ? [
-          {
-            p: ["itinerary", "sections", existing.index, "blocks", existing.section.blocks.length],
-            li: block,
-          },
-        ]
-      : [
-          {
-            // Insert a new hotels section after the Notes section (index 1).
-            // The existing sections shift down by 1.
-            p: ["itinerary", "sections", 1],
-            li: {
-              id: Math.floor(Math.random() * 1_000_000_000),
-              type: "hotels",
-              mode: "placeList",
-              heading: "Hotels and lodging",
-              date: null,
-              blocks: [block],
-              placeMarkerColor: "#7045af",
-              placeMarkerIcon: "bed",
-              text: { ops: [{ insert: "\n" }] },
-            },
-          },
-        ];
 
-    await submitOp(ctx, args.trip_key, ops);
+    let sectionIndex: number;
+    let blockIndex: number;
+    let mainOps: Json0Op[];
 
-    const text = `Added ${detail.name} to "${trip.title}" · check-in ${args.check_in} → check-out ${args.check_out}.`;
+    if (existing) {
+      sectionIndex = existing.index;
+      blockIndex = existing.section.blocks.length;
+      mainOps = [
+        {
+          p: ["itinerary", "sections", sectionIndex, "blocks", blockIndex],
+          li: block,
+        },
+      ];
+    } else {
+      sectionIndex = 1;
+      blockIndex = 0;
+      mainOps = [
+        {
+          // Insert a new hotels section after the Notes section (index 1).
+          // The existing sections shift down by 1.
+          p: ["itinerary", "sections", 1],
+          li: {
+            id: Math.floor(Math.random() * 1_000_000_000),
+            type: "hotels",
+            mode: "placeList",
+            heading: "Hotels and lodging",
+            date: null,
+            blocks: [block],
+            placeMarkerColor: "#7045af",
+            placeMarkerIcon: "bed",
+            text: { ops: [{ insert: "\n" }] },
+          },
+        },
+      ];
+    }
+
+    await submitOp(ctx, args.trip_key, mainOps);
+
+    // Follow-up ops for check_in_time and check_out_time. The block was inserted
+    // without timing fields, so we use oi (object insert) — the key doesn't exist
+    // yet. This matches the Wanderlog UI's two-step pattern (same as add-place).
+    if (args.check_in_time || args.check_out_time) {
+      const blockPath = ["itinerary", "sections", sectionIndex, "blocks", blockIndex];
+      const timeOps: Json0Op[] = [];
+      if (args.check_in_time) {
+        timeOps.push({ p: [...blockPath, "startTime"], oi: args.check_in_time });
+      }
+      if (args.check_out_time) {
+        timeOps.push({ p: [...blockPath, "endTime"], oi: args.check_out_time });
+      }
+      await submitOp(ctx, args.trip_key, timeOps);
+    }
+
+    const checkInDisplay = args.check_in_time
+      ? `${args.check_in} (${args.check_in_time})`
+      : args.check_in;
+    const checkOutDisplay = args.check_out_time
+      ? `${args.check_out} (${args.check_out_time})`
+      : args.check_out;
+
+    let text = `Added ${detail.name} to "${trip.title}" · check-in ${checkInDisplay} → check-out ${checkOutDisplay}.`;
+    if (args.confirmation_number) {
+      text += ` Confirmation: ${args.confirmation_number}.`;
+    }
+
     return { content: [{ type: "text", text }] };
   } catch (err) {
     const msg =
