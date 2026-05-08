@@ -54,16 +54,17 @@ describe("buildFlightBlock", () => {
       confirmation_number: "ABC123",
       traveler_names: ["Alice"],
     });
+    if (block.type !== "flight") throw new Error("expected flight block");
     expect(block.type).toBe("flight");
-    expect((block as any).flightInfo?.airline?.name).toBe("Singapore Airlines");
-    expect((block as any).flightInfo?.number).toBe("SQ 321");
-    expect((block as any).depart?.airport?.iata).toBe("SIN");
-    expect((block as any).depart?.airport?.name).toBeUndefined();
-    expect((block as any).depart?.time).toBe("09:00");
-    expect((block as any).arrive?.airport?.iata).toBe("NRT");
-    expect((block as any).arrive?.airport?.name).toBeUndefined();
-    expect((block as any).confirmationNumber).toBe("ABC123");
-    expect((block as any).travelerNames).toEqual(["Alice"]);
+    expect(block.flightInfo?.airline?.name).toBe("Singapore Airlines");
+    expect(block.flightInfo?.number).toBe("SQ 321");
+    expect(block.depart?.airport?.iata).toBe("SIN");
+    expect(block.depart?.airport?.name).toBeUndefined();
+    expect(block.depart?.time).toBe("09:00");
+    expect(block.arrive?.airport?.iata).toBe("NRT");
+    expect(block.arrive?.airport?.name).toBeUndefined();
+    expect(block.confirmationNumber).toBe("ABC123");
+    expect(block.travelerNames).toEqual(["Alice"]);
   });
 
   it("stores plain airport names in airport.name", () => {
@@ -71,10 +72,11 @@ describe("buildFlightBlock", () => {
       depart_airport: "Singapore",
       arrive_airport: "Tokyo Narita",
     });
-    expect((block as any).depart?.airport?.name).toBe("Singapore");
-    expect((block as any).depart?.airport?.iata).toBeUndefined();
-    expect((block as any).arrive?.airport?.name).toBe("Tokyo Narita");
-    expect((block as any).arrive?.airport?.iata).toBeUndefined();
+    if (block.type !== "flight") throw new Error("expected flight block");
+    expect(block.depart?.airport?.name).toBe("Singapore");
+    expect(block.depart?.airport?.iata).toBeUndefined();
+    expect(block.arrive?.airport?.name).toBe("Tokyo Narita");
+    expect(block.arrive?.airport?.iata).toBeUndefined();
   });
 
   it("detects IATA codes and stores in airport.iata", () => {
@@ -82,18 +84,20 @@ describe("buildFlightBlock", () => {
       depart_airport: "JFK",
       arrive_airport: "LAX",
     });
-    expect((block as any).depart?.airport?.iata).toBe("JFK");
-    expect((block as any).depart?.airport?.name).toBeUndefined();
-    expect((block as any).arrive?.airport?.iata).toBe("LAX");
-    expect((block as any).arrive?.airport?.name).toBeUndefined();
+    if (block.type !== "flight") throw new Error("expected flight block");
+    expect(block.depart?.airport?.iata).toBe("JFK");
+    expect(block.depart?.airport?.name).toBeUndefined();
+    expect(block.arrive?.airport?.iata).toBe("LAX");
+    expect(block.arrive?.airport?.name).toBeUndefined();
   });
 
   it("builds a minimal block with only type and id", () => {
     const block = buildFlightBlock({});
+    if (block.type !== "flight") throw new Error("expected flight block");
     expect(block.type).toBe("flight");
-    expect(typeof (block as any).id).toBe("number");
-    expect((block as any).flightInfo).toBeUndefined();
-    expect((block as any).depart).toBeUndefined();
+    expect(typeof block.id).toBe("number");
+    expect(block.flightInfo).toBeUndefined();
+    expect(block.depart).toBeUndefined();
   });
 });
 
@@ -110,16 +114,18 @@ describe("buildTrainBlock", () => {
       confirmation_number: "XYZ789",
       traveler_names: ["Bob"],
     });
+    if (block.type !== "train") throw new Error("expected train block");
     expect(block.type).toBe("train");
-    expect((block as any).carrier).toBe("JR East");
-    expect((block as any).depart?.place?.name).toBe("Tokyo Station");
-    expect((block as any).arrive?.place?.name).toBe("Kyoto Station");
-    expect((block as any).confirmationNumber).toBe("XYZ789");
+    expect(block.carrier).toBe("JR East");
+    expect(block.depart?.place?.name).toBe("Tokyo Station");
+    expect(block.arrive?.place?.name).toBe("Kyoto Station");
+    expect(block.confirmationNumber).toBe("XYZ789");
   });
 
   it("builds a minimal block", () => {
     const block = buildTrainBlock({});
+    if (block.type !== "train") throw new Error("expected train block");
     expect(block.type).toBe("train");
-    expect((block as any).carrier).toBeUndefined();
+    expect(block.carrier).toBeUndefined();
   });
 });
