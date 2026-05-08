@@ -80,6 +80,11 @@ import {
   movePlaceDescription,
   movePlaceInputSchema,
 } from "./tools/move-place.js";
+import {
+  addFlight,
+  addFlightDescription,
+  addFlightInputSchema,
+} from "./tools/add-flight.js";
 
 const AUTH_ERROR_RESPONSE = {
   content: [
@@ -301,6 +306,17 @@ export function buildServer(ctx: AppContext): McpServer {
     },
     requireAuth(ctx, async (args) =>
       movePlace(ctx, args as Parameters<typeof movePlace>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_add_flight",
+    {
+      title: "Add a flight to a Wanderlog trip",
+      description: addFlightDescription,
+      inputSchema: addFlightInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      addFlight(ctx, args as Parameters<typeof addFlight>[1])),
   );
 
   return server;
