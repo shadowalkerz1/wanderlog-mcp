@@ -61,6 +61,25 @@ Two distinct note types exist — don't confuse them:
 
 Both are `QuillDelta` (`{ ops: [{ insert: "...\n" }] }`). Both are mutated with the `rich-text` OT subtype op. The `src/resolvers/note-ref.ts` resolver finds `NoteBlock`s by ordinal + day scoping + content substring, mirroring the shape of `src/resolvers/place-ref.ts`.
 
+## Transport and booking blocks
+
+Three block types for travel logistics — don't confuse them with place blocks:
+
+- **`FlightBlock`** — inserted into the section with `type === "flights"` via `wanderlog_add_flight`. Built by `buildFlightBlock` in `shared.ts`. Airport strings are auto-detected: 3 uppercase letters → stored as `airport.iata`; anything else → `airport.name`.
+- **`TrainBlock`** — inserted into the section with `type === "transit"` via `wanderlog_add_train`. Built by `buildTrainBlock` in `shared.ts`. Uses station name strings (no IATA concept).
+- **Hotel** — `PlaceBlock` with a `hotel: HotelBooking` sub-object, inserted by `wanderlog_add_hotel`. `check_in_time`/`check_out_time` are set via follow-up `oi` ops after the block is inserted (same two-step pattern as `startTime`/`endTime` in `add-place`).
+
+Both `add_flight` and `add_train` gracefully fall back to storing dates as-is when `resolveDay` fails — flight/train dates may legitimately fall outside the trip's day range.
+
+## Moving and reordering places
+
+`wanderlog_move_place` handles three OT cases:
+- Same section, no copy → single `lm` op
+- Cross-section move → `ld` at source + `li` at destination (same `submitOp` call, safe because different sections)
+- Copy (any section) → `li` only
+
+Position resolution lives in `src/resolvers/position.ts`. Two variants: `resolveInsertPosition` (for `li`, range `[0, blocks.length]`) and `resolveLmPosition` (for `lm`, range `[0, blocks.length - 1]`). The lm variant accounts for source-removal index shift for "before X" / "after X" references.
+
 ## Don't
 
 - Don't create new top-level docs or README files — extend the existing ones in `docs/` instead.

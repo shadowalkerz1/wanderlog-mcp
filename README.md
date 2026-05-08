@@ -15,6 +15,13 @@ The agent calls the tools, interleaves places and notes for each day, adds hotel
 
 **See a real example:** [14-day Japan Golden Route](https://wanderlog.com/view/dmvegdhqsa/japan-golden-route--tokyo--hakone--kyoto--nara--osaka) — built entirely by an AI agent using this MCP server.
 
+## What's New in v0.4.0
+
+- `wanderlog_move_place` — move or copy a place to a different day, list, or position. Supports same-section reordering, cross-section moves, and copying a place to multiple lists. Natural-language references throughout: `"move the Louvre to day 3"`, `"copy Sensō-ji to my Temples list"`, `"put it after the museum"`.
+- `wanderlog_add_flight` — add a flight block (airline, flight number, airports, dates, times, confirmation number, passenger names). All fields optional — add what you know. Requires a flights section in the trip (create it in the Wanderlog app first).
+- `wanderlog_add_train` — add a train block (carrier, stations, dates, times, confirmation number). Same pattern as `add_flight`. Requires a transit section.
+- Enhanced `wanderlog_add_hotel` — now accepts `check_in_time` (e.g. `"15:00"`), `check_out_time`, `confirmation_number`, and `traveler_names`. Previously these were hardcoded empty.
+
 ## What's New in v0.3.0
 
 - `wanderlog_edit_note` — edit or clear any note in a trip. Works for both inline place notes (`place: "Sensō-ji"`) and standalone note blocks (`note_ref: "1st note on day 3"`). Standalone notes had no edit path before this.
@@ -72,6 +79,21 @@ and a ryokan in Shinjuku."
 ```
 "The transit note on day 3 of my Lisbon trip is wrong — change it to 'Take tram 28 from Alfama'."
 ```
+```
+"Move the Uffizi Gallery to day 2 of my Florence trip, put it after lunch."
+```
+```
+"Copy Tsukiji Market to both my Food list and day 1 of my Tokyo trip."
+```
+```
+"Add my Singapore Airlines flight SQ 321 — departs SIN at 09:00 on May 15, arrives NRT at 17:30."
+```
+```
+"Add my Eurostar — London St Pancras to Paris Gare du Nord, May 10 at 07:30."
+```
+```
+"Add my Park Hyatt Tokyo booking — check-in May 15 at 3pm, check-out May 18 at 11am, confirmation ABC123."
+```
 
 ## Tools
 
@@ -84,11 +106,14 @@ and a ryokan in Shinjuku."
 | `wanderlog_create_trip` | Create a new trip with destination + date range |
 | `wanderlog_add_place` | Add a place to a specific day or general list |
 | `wanderlog_add_note` | Add a note (transit tips, booking info, local advice) |
-| `wanderlog_add_hotel` | Add a hotel booking with check-in/check-out dates |
+| `wanderlog_add_hotel` | Add a hotel booking with check-in/check-out dates, times, confirmation number, and guest names |
+| `wanderlog_add_flight` | Add a flight block (airline, airports, times, confirmation, passengers) |
+| `wanderlog_add_train` | Add a train block (carrier, stations, times, confirmation, passengers) |
 | `wanderlog_add_checklist` | Add a pre-trip or per-day checklist |
 | `wanderlog_add_expense` | Log a budget expense (amount, category, currency) linked to a place |
 | `wanderlog_annotate_place` | Update an existing place with a note, start/end time, or both |
 | `wanderlog_edit_note` | Edit or clear a note — inline place note or standalone note block |
+| `wanderlog_move_place` | Move or copy a place to a different day, list, or position |
 | `wanderlog_remove_place` | Remove a place by natural-language reference |
 | `wanderlog_update_trip_dates` | Change a trip's date range |
 | `wanderlog_rename_day` | Rename a day's heading (e.g. `"Barcelona"` → `"Arrival — Feria de Abril"`) |

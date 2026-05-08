@@ -125,12 +125,18 @@ of places. A complete itinerary uses these building blocks:
   2. wanderlog_add_note — use ONLY for freestanding commentary between places: neighborhood
      context, multi-stop transit directions, or day-level tips not about a specific place.
      Do NOT use add_note for per-place context — use the "note" param on add_place instead.
-  3. wanderlog_add_hotel — one hotel block covering the full stay
-  4. wanderlog_add_checklist — at least one pre-trip checklist (visa, currency, offline maps,
+  3. wanderlog_add_hotel — one hotel block covering the full stay. Include check_in_time,
+     check_out_time, and confirmation_number when the user provides them.
+  4. wanderlog_add_flight — add a flight block when the user mentions flight details (airline,
+     airports, times). All fields are optional — add what you know.
+  5. wanderlog_add_train — add a train block for rail legs (carrier, stations, times).
+  6. wanderlog_add_checklist — at least one pre-trip checklist (visa, currency, offline maps,
      return ticket, travel insurance) and per-day checklists for days that need advance prep
-  5. wanderlog_add_expense — add estimated costs for meals, entrance fees, transport passes.
+  7. wanderlog_add_expense — add estimated costs for meals, entrance fees, transport passes.
      Link each expense to its place for budget tracking.
-  6. wanderlog_annotate_place — update an existing place with a note, start/end time, or both.
+  8. wanderlog_annotate_place — update an existing place with a note, start/end time, or both.
+  9. wanderlog_move_place — move or copy a place to a different day, list, or position.
+     Use when the user asks to reorder, reschedule, or duplicate a place.
 
 Example add_place call with all features:
   wanderlog_add_place(trip_key, place: "Sensō-ji", day: "day 1",
@@ -143,7 +149,7 @@ Places without notes and times are just pins on a map. Rich places make an itine
 
 export function buildServer(ctx: AppContext): McpServer {
   const server = new McpServer(
-    { name: "wanderlog-mcp", version: "0.2.0" },
+    { name: "wanderlog-mcp", version: "0.4.0" },
     { instructions: SERVER_INSTRUCTIONS },
   );
 
