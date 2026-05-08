@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createContext, type AppContext } from "../../src/context.ts";
 import { addChecklist } from "../../src/tools/add-checklist.ts";
+import { addFlight } from "../../src/tools/add-flight.ts";
 import { addHotel } from "../../src/tools/add-hotel.ts";
 import { addNote } from "../../src/tools/add-note.ts";
 import { addPlace } from "../../src/tools/add-place.ts";
+import { addTrain } from "../../src/tools/add-train.ts";
 import { createTrip } from "../../src/tools/create-trip.ts";
 import { getTrip } from "../../src/tools/get-trip.ts";
+import { movePlace } from "../../src/tools/move-place.ts";
 import { removePlace } from "../../src/tools/remove-place.ts";
 import { updateTripDates } from "../../src/tools/update-trip-dates.ts";
 import { isChecklistBlock, isPlaceBlock } from "../../src/types.ts";
@@ -282,5 +285,103 @@ describe("Mutation tools (live round-trip)", () => {
       .map((s) => s.date);
     expect(dayDates).toHaveLength(3);
     expect(dayDates).not.toContain("2099-01-04");
+  }, 30_000);
+
+  it("wanderlog_move_place: reorders a place within the same day", async (ctx_) => {
+    expect(tripKey).toBeDefined();
+
+    // Add a second place to day 1 so we have at least 2 place blocks to reorder.
+    const addResult = await addPlace(ctx, {
+      trip_key: tripKey!,
+      place: "Jerónimos Monastery",
+      day: "day 1",
+    });
+    if (addResult.isError) {
+      throw new Error(`add_place(day 1) failed: ${addResult.content[0]!.text}`);
+    }
+
+    const trip = await ctx.rest.getTrip(tripKey!);
+    const day1 = trip.itinerary.sections.find(
+      (s) => s.mode === "dayPlan" && s.date === "2099-01-01",
+    );
+    const placeBlocks = day1?.blocks.filter(isPlaceBlock) ?? [];
+    if (placeBlocks.length < 2) {
+      ctx_.skip();
+    }
+
+    const firstPlace = placeBlocks[0]!;
+    const firstName = firstPlace.place.name;
+
+    // Move the first place to last position.
+    const moveResult = await movePlace(ctx, {
+      trip_key: tripKey!,
+      place_ref: `1st ${firstName}`,
+      to: "day 1",
+      position: "last",
+    });
+    expect(moveResult.isError).not.toBe(true);
+
+    // Undo: move it back to first position.
+    const undoResult = await movePlace(ctx, {
+      trip_key: tripKey!,
+      place_ref: firstName,
+      to: "day 1",
+      position: "first",
+    });
+    expect(undoResult.isError).not.toBe(true);
+  }, 45_000);
+
+  it("wanderlog_add_flight: adds a flight when section exists", async (ctx_) => {
+    expect(tripKey).toBeDefined();
+
+    const trip = await ctx.rest.getTrip(tripKey!);
+    const hasFlights = trip.itinerary.sections.some((s) => s.type === "flights");
+    if (!hasFlights) {
+      ctx_.skip();
+    }
+
+    const result = await addFlight(ctx, {
+      trip_key: tripKey!,
+      airline: "Test Airlines",
+      flight_number: "TA 001",
+    });
+    expect(result.isError).not.toBe(true);
+  }, 30_000);
+
+  it("wanderlog_add_train: adds a train when section exists", async (ctx_) => {
+    expect(tripKey).toBeDefined();
+
+    const trip = await ctx.rest.getTrip(tripKey!);
+    const hasTransit = trip.itinerary.sections.some((s) => s.type === "transit");
+    if (!hasTransit) {
+      ctx_.skip();
+    }
+
+    const result = await addTrain(ctx, {
+      trip_key: tripKey!,
+      carrier: "Test Rail",
+      depart_station: "Lisbon Oriente",
+      arrive_station: "Porto Campanhã",
+    });
+    expect(result.isError).not.toBe(true);
+  }, 30_000);
+
+  it("wanderlog_add_hotel: accepts new params (confirmation_number, check_in_time)", async () => {
+    expect(tripKey).toBeDefined();
+
+    const result = await addHotel(ctx, {
+      trip_key: tripKey!,
+      hotel: "Bairro Alto Hotel Lisboa",
+      check_in: "2099-01-01",
+      check_out: "2099-01-03",
+      check_in_time: "15:00",
+      check_out_time: "11:00",
+      confirmation_number: "TEST123",
+    });
+    if (result.isError) {
+      throw new Error(`add_hotel (new params) failed: ${result.content[0]!.text}`);
+    }
+    const text = result.content[0]!.text;
+    expect(text).toMatch(/15:00|TEST123/);
   }, 30_000);
 });
