@@ -3,21 +3,27 @@ import {
   resolveInsertPosition,
   resolveLmPosition,
 } from "../../src/resolvers/position.ts";
-import { WanderlogNotFoundError } from "../../src/errors.ts";
-import type { Block } from "../../src/types.ts";
+import { WanderlogNotFoundError, WanderlogValidationError } from "../../src/errors.ts";
+import type { Block, PlaceBlock, TrainBlock } from "../../src/types.ts";
 
-function makeBlock(name: string): Block {
+let _idCounter = 0;
+function makePlaceBlock(name: string): PlaceBlock {
   return {
-    id: Number(name === "Museum" ? 1 : name === "Park" ? 2 : 3),
+    id: ++_idCounter,
     type: "place",
-    place: {
-      name,
-      place_id: "x",
-    },
-  } as Block;
+    place: { name, place_id: "x" },
+  };
 }
 
-const blocks = [makeBlock("Museum"), makeBlock("Park"), makeBlock("Temple")];
+function makeTrainBlock(carrier: string): TrainBlock {
+  return {
+    id: ++_idCounter,
+    type: "train",
+    carrier,
+  };
+}
+
+const blocks: Block[] = [makePlaceBlock("Museum"), makePlaceBlock("Park"), makePlaceBlock("Temple")];
 
 describe("resolveInsertPosition", () => {
   describe("undefined and 'last'", () => {
@@ -213,5 +219,33 @@ describe("resolveLmPosition", () => {
         resolveLmPosition([], "first", 0);
       }).toThrow(WanderlogNotFoundError);
     });
+  });
+
+  describe("unrecognized position", () => {
+    it("throws WanderlogValidationError for 'middle'", () => {
+      expect(() => {
+        resolveLmPosition(blocks, "middle", 0);
+      }).toThrow(WanderlogValidationError);
+    });
+  });
+});
+
+describe("getBlockName via before/after — train blocks", () => {
+  const trainBlocks: Block[] = [
+    makePlaceBlock("Museum"),
+    makeTrainBlock("Shinkansen"),
+    makePlaceBlock("Temple"),
+  ];
+
+  it("resolveInsertPosition 'before <train carrier>' matches train block", () => {
+    expect(resolveInsertPosition(trainBlocks, "before Shinkansen")).toBe(1);
+  });
+});
+
+describe("resolveInsertPosition — unrecognized position", () => {
+  it("throws WanderlogValidationError for 'middle'", () => {
+    expect(() => {
+      resolveInsertPosition(blocks, "middle");
+    }).toThrow(WanderlogValidationError);
   });
 });

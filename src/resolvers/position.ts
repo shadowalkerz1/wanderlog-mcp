@@ -1,9 +1,40 @@
-import { WanderlogNotFoundError } from "../errors.js";
-import type { Block, PlaceBlock } from "../types.js";
+import { WanderlogNotFoundError, WanderlogValidationError } from "../errors.js";
+import type { Block, FlightBlock, NoteBlock, TrainBlock } from "../types.js";
+import { isPlaceBlock } from "../types.js";
+
+function isFlightBlock(block: Block): block is FlightBlock {
+  return block.type === "flight" && "flightInfo" in block;
+}
+
+function isTrainBlock(block: Block): block is TrainBlock {
+  return block.type === "train" && "carrier" in block;
+}
+
+function isNoteBlock(block: Block): block is NoteBlock {
+  return block.type === "note" && "text" in block;
+}
 
 function getBlockName(block: Block): string | undefined {
-  if (block.type === "place") {
-    return (block as PlaceBlock).place?.name;
+  if (isPlaceBlock(block)) {
+    return block.place.name;
+  }
+  if (isFlightBlock(block)) {
+    const parts = [
+      block.flightInfo?.airline?.name,
+      block.flightInfo?.number != null ? String(block.flightInfo.number) : undefined,
+    ].filter((p): p is string => Boolean(p));
+    if (parts.length > 0) return parts.join(" ");
+    const departIata = block.depart?.airport?.iata;
+    const arriveIata = block.arrive?.airport?.iata;
+    if (departIata && arriveIata) return `${departIata}→${arriveIata}`;
+    return undefined;
+  }
+  if (isTrainBlock(block)) {
+    return block.carrier;
+  }
+  if (isNoteBlock(block)) {
+    const insert = block.text?.ops?.[0]?.insert;
+    return insert ? insert.slice(0, 50) : undefined;
   }
   return undefined;
 }
@@ -61,7 +92,9 @@ export function resolveInsertPosition(
     return index + 1;
   }
 
-  return blocks.length;
+  throw new WanderlogValidationError(
+    `Unrecognized position "${position}". Use "first", "last", a number, "before <name>", or "after <name>".`,
+  );
 }
 
 export function resolveLmPosition(
@@ -116,5 +149,7 @@ export function resolveLmPosition(
     }
   }
 
-  return blocks.length - 1;
+  throw new WanderlogValidationError(
+    `Unrecognized position "${position}". Use "first", "last", a number, "before <name>", or "after <name>".`,
+  );
 }
