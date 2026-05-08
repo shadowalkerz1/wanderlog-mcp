@@ -276,3 +276,105 @@ export function buildChecklistBlock(
     attachments: [],
   };
 }
+
+/** Finds the first flights-type section in the trip. */
+export function findFlightsSection(trip: TripPlan): {
+  index: number;
+  section: Section;
+} | null {
+  for (let i = 0; i < trip.itinerary.sections.length; i++) {
+    const s = trip.itinerary.sections[i]!;
+    if (s.type === "flights") return { index: i, section: s };
+  }
+  return null;
+}
+
+/** Finds the first transit-type section in the trip. */
+export function findTransitSection(trip: TripPlan): {
+  index: number;
+  section: Section;
+} | null {
+  for (let i = 0; i < trip.itinerary.sections.length; i++) {
+    const s = trip.itinerary.sections[i]!;
+    if (s.type === "transit") return { index: i, section: s };
+  }
+  return null;
+}
+
+/** Build a FlightBlock matching Wanderlog's schema. */
+export function buildFlightBlock(args: {
+  airline?: string;
+  flight_number?: string;
+  depart_airport?: string;
+  depart_date?: string;
+  depart_time?: string;
+  arrive_airport?: string;
+  arrive_date?: string;
+  arrive_time?: string;
+  confirmation_number?: string;
+  traveler_names?: string[];
+}): Block {
+  const block: Record<string, unknown> = {
+    id: generateBlockId(),
+    type: "flight",
+  };
+  if (args.airline || args.flight_number) {
+    block.flightInfo = {
+      ...(args.airline ? { airline: { name: args.airline } } : {}),
+      ...(args.flight_number ? { number: args.flight_number } : {}),
+    };
+  }
+  if (args.depart_airport || args.depart_date || args.depart_time) {
+    block.depart = {
+      ...(args.depart_date ? { date: args.depart_date } : {}),
+      ...(args.depart_time ? { time: args.depart_time } : {}),
+      ...(args.depart_airport ? { airport: { name: args.depart_airport } } : {}),
+    };
+  }
+  if (args.arrive_airport || args.arrive_date || args.arrive_time) {
+    block.arrive = {
+      ...(args.arrive_date ? { date: args.arrive_date } : {}),
+      ...(args.arrive_time ? { time: args.arrive_time } : {}),
+      ...(args.arrive_airport ? { airport: { name: args.arrive_airport } } : {}),
+    };
+  }
+  if (args.confirmation_number) block.confirmationNumber = args.confirmation_number;
+  if (args.traveler_names?.length) block.travelerNames = args.traveler_names;
+  return block as unknown as Block;
+}
+
+/** Build a TrainBlock matching Wanderlog's schema. */
+export function buildTrainBlock(args: {
+  carrier?: string;
+  depart_station?: string;
+  depart_date?: string;
+  depart_time?: string;
+  arrive_station?: string;
+  arrive_date?: string;
+  arrive_time?: string;
+  confirmation_number?: string;
+  traveler_names?: string[];
+}): Block {
+  const block: Record<string, unknown> = {
+    id: generateBlockId(),
+    type: "train",
+  };
+  if (args.carrier) block.carrier = args.carrier;
+  if (args.depart_station || args.depart_date || args.depart_time) {
+    block.depart = {
+      ...(args.depart_date ? { date: args.depart_date } : {}),
+      ...(args.depart_time ? { time: args.depart_time } : {}),
+      ...(args.depart_station ? { place: { name: args.depart_station } } : {}),
+    };
+  }
+  if (args.arrive_station || args.arrive_date || args.arrive_time) {
+    block.arrive = {
+      ...(args.arrive_date ? { date: args.arrive_date } : {}),
+      ...(args.arrive_time ? { time: args.arrive_time } : {}),
+      ...(args.arrive_station ? { place: { name: args.arrive_station } } : {}),
+    };
+  }
+  if (args.confirmation_number) block.confirmationNumber = args.confirmation_number;
+  if (args.traveler_names?.length) block.travelerNames = args.traveler_names;
+  return block as unknown as Block;
+}
