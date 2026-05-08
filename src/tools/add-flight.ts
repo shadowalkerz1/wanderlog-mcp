@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AppContext } from "../context.js";
 import { WanderlogError } from "../errors.js";
 import type { Json0Op } from "../ot/apply.js";
+import type { TripPlan } from "../types.js";
 import { resolveDay } from "../resolvers/day.js";
 import { buildFlightBlock, findFlightsSection, submitOp } from "./shared.js";
 
@@ -60,7 +61,7 @@ type Args = {
  * - Otherwise try resolveDay, and return its .date
  * - If resolveDay throws, return the string as-is (flight may be outside trip range)
  */
-function resolveFlightDate(trip: any, dateStr?: string): string | undefined {
+function resolveFlightDate(trip: TripPlan, dateStr?: string): string | undefined {
   if (!dateStr) return undefined;
 
   // Check if already ISO format
