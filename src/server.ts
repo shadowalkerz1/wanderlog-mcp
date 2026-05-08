@@ -75,6 +75,11 @@ import {
   editNoteDescription,
   editNoteInputSchema,
 } from "./tools/edit-note.js";
+import {
+  movePlace,
+  movePlaceDescription,
+  movePlaceInputSchema,
+} from "./tools/move-place.js";
 
 const AUTH_ERROR_RESPONSE = {
   content: [
@@ -285,6 +290,17 @@ export function buildServer(ctx: AppContext): McpServer {
     },
     requireAuth(ctx, async (args) =>
       editNote(ctx, args as Parameters<typeof editNote>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_move_place",
+    {
+      title: "Move or copy a place to a different section in a Wanderlog trip",
+      description: movePlaceDescription,
+      inputSchema: movePlaceInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      movePlace(ctx, args as Parameters<typeof movePlace>[1])),
   );
 
   return server;
