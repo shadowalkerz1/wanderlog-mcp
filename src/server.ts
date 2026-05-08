@@ -85,6 +85,11 @@ import {
   addFlightDescription,
   addFlightInputSchema,
 } from "./tools/add-flight.js";
+import {
+  addTrain,
+  addTrainDescription,
+  addTrainInputSchema,
+} from "./tools/add-train.js";
 
 const AUTH_ERROR_RESPONSE = {
   content: [
@@ -317,6 +322,17 @@ export function buildServer(ctx: AppContext): McpServer {
     },
     requireAuth(ctx, async (args) =>
       addFlight(ctx, args as Parameters<typeof addFlight>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_add_train",
+    {
+      title: "Add a train to a Wanderlog trip",
+      description: addTrainDescription,
+      inputSchema: addTrainInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      addTrain(ctx, args as Parameters<typeof addTrain>[1])),
   );
 
   return server;
