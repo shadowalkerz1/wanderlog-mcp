@@ -214,6 +214,17 @@ export function buildServer(ctx: AppContext): McpServer {
   );
 
   server.registerTool(
+    "wanderlog_move_place",
+    {
+      title: "Move or copy a place to a different section in a Wanderlog trip",
+      description: movePlaceDescription,
+      inputSchema: movePlaceInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      movePlace(ctx, args as Parameters<typeof movePlace>[1])),
+  );
+
+  server.registerTool(
     "wanderlog_add_hotel",
     {
       title: "Add a hotel booking to a Wanderlog trip",
@@ -221,6 +232,28 @@ export function buildServer(ctx: AppContext): McpServer {
       inputSchema: addHotelInputSchema,
     },
     requireAuth(ctx, async (args) => addHotel(ctx, args as Parameters<typeof addHotel>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_add_flight",
+    {
+      title: "Add a flight to a Wanderlog trip",
+      description: addFlightDescription,
+      inputSchema: addFlightInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      addFlight(ctx, args as Parameters<typeof addFlight>[1])),
+  );
+
+  server.registerTool(
+    "wanderlog_add_train",
+    {
+      title: "Add a train to a Wanderlog trip",
+      description: addTrainDescription,
+      inputSchema: addTrainInputSchema,
+    },
+    requireAuth(ctx, async (args) =>
+      addTrain(ctx, args as Parameters<typeof addTrain>[1])),
   );
 
   server.registerTool(
@@ -306,39 +339,6 @@ export function buildServer(ctx: AppContext): McpServer {
     },
     requireAuth(ctx, async (args) =>
       editNote(ctx, args as Parameters<typeof editNote>[1])),
-  );
-
-  server.registerTool(
-    "wanderlog_move_place",
-    {
-      title: "Move or copy a place to a different section in a Wanderlog trip",
-      description: movePlaceDescription,
-      inputSchema: movePlaceInputSchema,
-    },
-    requireAuth(ctx, async (args) =>
-      movePlace(ctx, args as Parameters<typeof movePlace>[1])),
-  );
-
-  server.registerTool(
-    "wanderlog_add_flight",
-    {
-      title: "Add a flight to a Wanderlog trip",
-      description: addFlightDescription,
-      inputSchema: addFlightInputSchema,
-    },
-    requireAuth(ctx, async (args) =>
-      addFlight(ctx, args as Parameters<typeof addFlight>[1])),
-  );
-
-  server.registerTool(
-    "wanderlog_add_train",
-    {
-      title: "Add a train to a Wanderlog trip",
-      description: addTrainDescription,
-      inputSchema: addTrainInputSchema,
-    },
-    requireAuth(ctx, async (args) =>
-      addTrain(ctx, args as Parameters<typeof addTrain>[1])),
   );
 
   return server;
