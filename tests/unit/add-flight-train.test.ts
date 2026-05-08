@@ -57,11 +57,35 @@ describe("buildFlightBlock", () => {
     expect(block.type).toBe("flight");
     expect((block as any).flightInfo?.airline?.name).toBe("Singapore Airlines");
     expect((block as any).flightInfo?.number).toBe("SQ 321");
-    expect((block as any).depart?.airport?.name).toBe("SIN");
+    expect((block as any).depart?.airport?.iata).toBe("SIN");
+    expect((block as any).depart?.airport?.name).toBeUndefined();
     expect((block as any).depart?.time).toBe("09:00");
-    expect((block as any).arrive?.airport?.name).toBe("NRT");
+    expect((block as any).arrive?.airport?.iata).toBe("NRT");
+    expect((block as any).arrive?.airport?.name).toBeUndefined();
     expect((block as any).confirmationNumber).toBe("ABC123");
     expect((block as any).travelerNames).toEqual(["Alice"]);
+  });
+
+  it("stores plain airport names in airport.name", () => {
+    const block = buildFlightBlock({
+      depart_airport: "Singapore",
+      arrive_airport: "Tokyo Narita",
+    });
+    expect((block as any).depart?.airport?.name).toBe("Singapore");
+    expect((block as any).depart?.airport?.iata).toBeUndefined();
+    expect((block as any).arrive?.airport?.name).toBe("Tokyo Narita");
+    expect((block as any).arrive?.airport?.iata).toBeUndefined();
+  });
+
+  it("detects IATA codes and stores in airport.iata", () => {
+    const block = buildFlightBlock({
+      depart_airport: "JFK",
+      arrive_airport: "LAX",
+    });
+    expect((block as any).depart?.airport?.iata).toBe("JFK");
+    expect((block as any).depart?.airport?.name).toBeUndefined();
+    expect((block as any).arrive?.airport?.iata).toBe("LAX");
+    expect((block as any).arrive?.airport?.name).toBeUndefined();
   });
 
   it("builds a minimal block with only type and id", () => {

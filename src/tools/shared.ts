@@ -301,6 +301,15 @@ export function findTransitSection(trip: TripPlan): {
   return null;
 }
 
+/**
+ * Detects whether a string is an IATA airport code (exactly 3 uppercase letters)
+ * or a plain name, and returns the appropriate airport object.
+ */
+function airportField(code: string | undefined): { name?: string; iata?: string } | undefined {
+  if (!code) return undefined;
+  return /^[A-Z]{3}$/.test(code) ? { iata: code } : { name: code };
+}
+
 /** Build a FlightBlock matching Wanderlog's schema. */
 export function buildFlightBlock(args: {
   airline?: string;
@@ -328,14 +337,14 @@ export function buildFlightBlock(args: {
     block.depart = {
       ...(args.depart_date ? { date: args.depart_date } : {}),
       ...(args.depart_time ? { time: args.depart_time } : {}),
-      ...(args.depart_airport ? { airport: { name: args.depart_airport } } : {}),
+      ...(args.depart_airport ? { airport: airportField(args.depart_airport) } : {}),
     };
   }
   if (args.arrive_airport || args.arrive_date || args.arrive_time) {
     block.arrive = {
       ...(args.arrive_date ? { date: args.arrive_date } : {}),
       ...(args.arrive_time ? { time: args.arrive_time } : {}),
-      ...(args.arrive_airport ? { airport: { name: args.arrive_airport } } : {}),
+      ...(args.arrive_airport ? { airport: airportField(args.arrive_airport) } : {}),
     };
   }
   if (args.confirmation_number) block.confirmationNumber = args.confirmation_number;
