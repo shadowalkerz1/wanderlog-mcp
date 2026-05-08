@@ -15,6 +15,15 @@ The agent calls the tools, interleaves places and notes for each day, adds hotel
 
 **See a real example:** [14-day Japan Golden Route](https://wanderlog.com/view/dmvegdhqsa/japan-golden-route--tokyo--hakone--kyoto--nara--osaka) — built entirely by an AI agent using this MCP server.
 
+## What's New in v0.5.0
+
+- **Note editing fixed** — `wanderlog_annotate_place` now properly replaces a place's inline note instead of prepending to it. Calling it twice no longer duplicates the text.
+- **Cleaner tool split** — `wanderlog_annotate_place` is now the single tool for editing a place's note or times. `wanderlog_edit_note` handles standalone note blocks (added by `add_note`) only — no more ambiguity about which tool to call.
+- **Renamed `wanderlog_remove_place` → `wanderlog_remove`** — removes any block (place, hotel, flight, train) by natural-language reference. The old name implied it only worked on places.
+- **Renamed `wanderlog_move_place` → `wanderlog_move`** — same reason. Moves or copies any block to a different day, list, or position.
+- **`wanderlog_get_trip` now includes the shareable link** — the edit URL is appended to every `get_trip` response. `wanderlog_get_trip_url` has been removed as a separate tool.
+- **`wanderlog_search_places` description fixed** — the previous description incorrectly said to use place_ids with downstream tools. `wanderlog_add_place` does its own lookup and never needed a place_id.
+
 ## What's New in v0.4.0
 
 - `wanderlog_move_place` — move or copy a place to a different day, list, or position. Supports same-section reordering, cross-section moves, and copying a place to multiple lists. Natural-language references throughout: `"move the Louvre to day 3"`, `"copy Sensō-ji to my Temples list"`, `"put it after the museum"`.
@@ -24,7 +33,7 @@ The agent calls the tools, interleaves places and notes for each day, adds hotel
 
 ## What's New in v0.3.0
 
-- `wanderlog_edit_note` — edit or clear any note in a trip. Works for both inline place notes (`place: "Sensō-ji"`) and standalone note blocks (`note_ref: "1st note on day 3"`). Standalone notes had no edit path before this.
+- `wanderlog_edit_note` — edit or clear standalone note blocks (`note_ref: "1st note on day 3"`). Standalone notes had no edit path before this. (As of v0.5.0, inline place notes are edited via `wanderlog_annotate_place`.)
 - **Cloudflare Workers deployment** — self-host on Cloudflare's free tier (100k req/day, always-on) and connect from Claude.ai, Cursor, or any HTTP MCP client without running anything locally. See [Hosted deployment (Cloudflare Workers)](#hosted-deployment-cloudflare-workers) below.
 - Custom list support in `wanderlog_add_place` — add places directly to user-created lists like "Coffee places" or "Beer places" using the `list` parameter.
 
@@ -68,7 +77,7 @@ and a ryokan in Shinjuku."
 "Move my Rome trip back by two weeks."
 ```
 ```
-"Give me the shareable link to my Kyoto itinerary."
+"Show me my Kyoto itinerary." (includes the shareable link)
 ```
 ```
 "Remove the Colosseum from day 2 of my Rome trip."
@@ -100,21 +109,20 @@ and a ryokan in Shinjuku."
 | Tool | What it does |
 |---|---|
 | `wanderlog_list_trips` | List trips in your account |
-| `wanderlog_get_trip` | View a full itinerary, or filter to a single day |
-| `wanderlog_get_trip_url` | Get a shareable wanderlog.com link |
-| `wanderlog_search_places` | Find real-world places near a trip's destination |
+| `wanderlog_get_trip` | View a full itinerary (or filter to a single day) — includes the shareable link |
+| `wanderlog_search_places` | Browse real-world places near a trip's destination before committing |
 | `wanderlog_create_trip` | Create a new trip with destination + date range |
 | `wanderlog_add_place` | Add a place to a specific day or general list |
-| `wanderlog_add_note` | Add a note (transit tips, booking info, local advice) |
+| `wanderlog_add_note` | Add a standalone note (transit tips, booking info, local advice) between places |
 | `wanderlog_add_hotel` | Add a hotel booking with check-in/check-out dates, times, confirmation number, and guest names |
 | `wanderlog_add_flight` | Add a flight block (airline, airports, times, confirmation, passengers) |
 | `wanderlog_add_train` | Add a train block (carrier, stations, times, confirmation, passengers) |
 | `wanderlog_add_checklist` | Add a pre-trip or per-day checklist |
 | `wanderlog_add_expense` | Log a budget expense (amount, category, currency) linked to a place |
-| `wanderlog_annotate_place` | Update an existing place with a note, start/end time, or both |
-| `wanderlog_edit_note` | Edit or clear a note — inline place note or standalone note block |
-| `wanderlog_move_place` | Move or copy a place to a different day, list, or position |
-| `wanderlog_remove_place` | Remove a place by natural-language reference |
+| `wanderlog_annotate_place` | Set or replace the inline note, start/end time, or both on an existing place |
+| `wanderlog_edit_note` | Edit or clear a standalone note block (added by `add_note`) |
+| `wanderlog_move` | Move or copy any block (place, hotel, flight, train) to a different day, list, or position |
+| `wanderlog_remove` | Remove any block (place, hotel, flight, train) by natural-language reference |
 | `wanderlog_update_trip_dates` | Change a trip's date range |
 | `wanderlog_rename_day` | Rename a day's heading (e.g. `"Barcelona"` → `"Arrival — Feria de Abril"`) |
 

@@ -4,7 +4,7 @@ import { WanderlogError, WanderlogValidationError } from "../errors.js";
 import type { Json0Op } from "../ot/apply.js";
 import { resolvePlaceRef } from "../resolvers/place-ref.js";
 import { isPlaceBlock } from "../types.js";
-import { submitOp } from "./shared.js";
+import { quillPlainText, submitOp } from "./shared.js";
 
 export const annotatePlaceInputSchema = {
   trip_key: z
@@ -93,13 +93,18 @@ export async function annotatePlace(
     const blockPath = ["itinerary", "sections", sectionIndex, "blocks", blockIndex];
     const placeName = isPlaceBlock(block) ? block.place.name : `block #${block.id}`;
 
-    // Set inline note via rich-text subtype op
+    // Set inline note via rich-text subtype op — delete existing content first
+    // so we replace rather than prepend (Quill Delta insert at pos 0 = prepend).
     if (args.note) {
+      const existingText = quillPlainText(isPlaceBlock(block) ? block.text : undefined);
+      const deltaOps = existingText.length > 0
+        ? [{ delete: existingText.length }, { insert: `${args.note}\n` }]
+        : [{ insert: `${args.note}\n` }];
       const textOps: Json0Op[] = [
         {
           p: [...blockPath, "text"],
           t: "rich-text",
-          o: [{ insert: `${args.note}\n` }],
+          o: deltaOps,
         },
       ];
       await submitOp(ctx, args.trip_key, textOps);

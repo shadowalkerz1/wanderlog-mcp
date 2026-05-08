@@ -2,7 +2,7 @@ import type { AppContext } from "../context.js";
 import { WanderlogError, WanderlogValidationError } from "../errors.js";
 import type { Json0Op } from "../ot/apply.js";
 import { resolveDay } from "../resolvers/day.js";
-import type { Block, ChecklistItem, Geo, PlaceData, Section, TripPlan } from "../types.js";
+import type { Block, ChecklistItem, Geo, PlaceData, QuillDelta, Section, TripPlan } from "../types.js";
 import { isPlaceBlock } from "../types.js";
 
 /**
@@ -254,6 +254,17 @@ export function buildNoteBlock(userId: number): Record<string, unknown> {
     addedBy: { type: "user", userId },
     attachments: [],
   };
+}
+
+/**
+ * Extracts the raw plain-text string from a QuillDelta (includes trailing newline).
+ * Used to compute the existing text length before building a replace delta.
+ */
+export function quillPlainText(delta: QuillDelta | undefined): string {
+  if (!delta?.ops) return "";
+  return delta.ops
+    .map((op) => (typeof op.insert === "string" ? op.insert : ""))
+    .join("");
 }
 
 /** Build a checklist block with pre-populated items. */

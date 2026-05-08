@@ -3,6 +3,7 @@ import type { AppContext } from "../context.js";
 import { WanderlogError } from "../errors.js";
 import { formatTrip } from "../formatters/trip-summary.js";
 import { resolveDay } from "../resolvers/day.js";
+import { buildTripUrl } from "./get-trip-url.js";
 
 export const getTripInputSchema = {
   trip_key: z
@@ -27,7 +28,7 @@ export const getTripInputSchema = {
 
 export const getTripDescription = `
 Returns the itinerary for one Wanderlog trip: the hotels list, the "places to visit" list, and
-each day's scheduled places.
+each day's scheduled places. Also includes the wanderlog.com link to open the trip.
 
 Use concise format for summarizing or answering questions about a trip in natural language.
 Use detailed format when the user asks for specific info like addresses, phone numbers, or
@@ -49,7 +50,9 @@ export async function getTrip(
   try {
     const trip = await ctx.tripCache.get(args.trip_key);
     const daySection = args.day ? resolveDay(trip, args.day) : undefined;
-    const text = formatTrip(trip, args.response_format ?? "concise", daySection);
+    const itinerary = formatTrip(trip, args.response_format ?? "concise", daySection);
+    const url = buildTripUrl(trip, "edit", ctx.config.baseUrl);
+    const text = `${itinerary}\n\n🔗 ${url}`;
     return { content: [{ type: "text", text }] };
   } catch (err) {
     const e =

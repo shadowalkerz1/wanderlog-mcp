@@ -21,7 +21,7 @@ export const searchPlacesInputSchema = {
     .enum(["concise", "detailed"])
     .default("concise")
     .describe(
-      "Output verbosity. 'concise' lists name + description only; 'detailed' adds the Google place_id needed for downstream tool calls.",
+      "Output verbosity. 'concise' lists name + description only; 'detailed' also shows the Google place_id for reference.",
     ),
 };
 
@@ -29,11 +29,12 @@ export const searchPlacesDescription = `
 Search for real-world places (restaurants, attractions, hotels, parks, landmarks) near the
 destination of a Wanderlog trip. Returns candidate results with names and short descriptions.
 
-Use this to resolve user requests like "find a good coffee shop in Queenstown" into specific
-place candidates. Results are geographically biased toward the trip's location, not global.
+Use this when the user wants to browse options before committing — e.g. "what sushi restaurants
+are near my hotel?" Present the results and let the user choose. Results are geographically
+biased toward the trip's location, not global.
 
-If the user wants to *add* a place to a trip, call this first with concise format to present
-options, then call again with detailed format to get place_ids for downstream actions.
+To add a specific place to the itinerary, use wanderlog_add_place directly — it does its own
+place lookup and does not require a place_id from this tool.
 `.trim();
 
 type Args = {

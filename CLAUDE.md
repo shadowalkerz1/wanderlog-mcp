@@ -56,7 +56,7 @@ After changing any `src/**` file, always run `npm run build && npm run test` bef
 
 Two distinct note types exist — don't confuse them:
 
-- **Inline place note** (`PlaceBlock.text`) — the short note attached to a place entry. Set via `wanderlog_add_place` (note param) or `wanderlog_annotate_place`. Edit via `wanderlog_edit_note` with the `place` param.
+- **Inline place note** (`PlaceBlock.text`) — the short note attached to a place entry. Set at add time via `wanderlog_add_place` (note param). Update/replace afterwards via `wanderlog_annotate_place`.
 - **Standalone note block** (`NoteBlock.text`) — a free-standing block between places, created by `wanderlog_add_note`. Edit via `wanderlog_edit_note` with the `note_ref` param.
 
 Both are `QuillDelta` (`{ ops: [{ insert: "...\n" }] }`). Both are mutated with the `rich-text` OT subtype op. The `src/resolvers/note-ref.ts` resolver finds `NoteBlock`s by ordinal + day scoping + content substring, mirroring the shape of `src/resolvers/place-ref.ts`.
@@ -73,7 +73,7 @@ Both `add_flight` and `add_train` gracefully fall back to storing dates as-is wh
 
 ## Moving and reordering places
 
-`wanderlog_move_place` handles three OT cases:
+`wanderlog_move` handles three OT cases:
 - Same section, no copy → single `lm` op
 - Cross-section move → `ld` at source + `li` at destination (same `submitOp` call, safe because different sections)
 - Copy (any section) → `li` only

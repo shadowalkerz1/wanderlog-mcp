@@ -41,11 +41,6 @@ import {
   getTripInputSchema,
 } from "./tools/get-trip.js";
 import {
-  getTripUrl,
-  getTripUrlDescription,
-  getTripUrlInputSchema,
-} from "./tools/get-trip-url.js";
-import {
   listTrips,
   listTripsDescription,
   listTripsInputSchema,
@@ -134,9 +129,13 @@ of places. A complete itinerary uses these building blocks:
      return ticket, travel insurance) and per-day checklists for days that need advance prep
   7. wanderlog_add_expense — add estimated costs for meals, entrance fees, transport passes.
      Link each expense to its place for budget tracking.
-  8. wanderlog_annotate_place — update an existing place with a note, start/end time, or both.
-  9. wanderlog_move_place — move or copy a place to a different day, list, or position.
-     Use when the user asks to reorder, reschedule, or duplicate a place.
+  8. wanderlog_annotate_place — set or replace the inline note, start/end time, or all three
+     on a place already in the itinerary. This is the ONLY tool for editing place notes.
+  9. wanderlog_edit_note — edit or clear the text of a standalone note block (the kind added
+     by wanderlog_add_note). Do NOT use this for place notes — use annotate_place instead.
+ 10. wanderlog_move — move or copy ANY block (place, hotel, flight, train) to a different day,
+     list, or position. Use when the user asks to reorder, reschedule, or duplicate a block.
+ 11. wanderlog_remove — remove ANY block (place, hotel, flight, train) from the itinerary.
 
 Example add_place call with all features:
   wanderlog_add_place(trip_key, place: "Sensō-ji", day: "day 1",
@@ -174,16 +173,6 @@ export function buildServer(ctx: AppContext): McpServer {
   );
 
   server.registerTool(
-    "wanderlog_get_trip_url",
-    {
-      title: "Get the wanderlog.com URL for a trip",
-      description: getTripUrlDescription,
-      inputSchema: getTripUrlInputSchema,
-    },
-    requireAuth(ctx, async (args) => getTripUrl(ctx, args as Parameters<typeof getTripUrl>[1])),
-  );
-
-  server.registerTool(
     "wanderlog_search_places",
     {
       title: "Search places near a Wanderlog trip",
@@ -214,9 +203,9 @@ export function buildServer(ctx: AppContext): McpServer {
   );
 
   server.registerTool(
-    "wanderlog_move_place",
+    "wanderlog_move",
     {
-      title: "Move or copy a place to a different section in a Wanderlog trip",
+      title: "Move or copy any block to a different section in a Wanderlog trip",
       description: movePlaceDescription,
       inputSchema: movePlaceInputSchema,
     },
@@ -299,9 +288,9 @@ export function buildServer(ctx: AppContext): McpServer {
   );
 
   server.registerTool(
-    "wanderlog_remove_place",
+    "wanderlog_remove",
     {
-      title: "Remove a place from a Wanderlog trip",
+      title: "Remove any block from a Wanderlog trip",
       description: removePlaceDescription,
       inputSchema: removePlaceInputSchema,
     },

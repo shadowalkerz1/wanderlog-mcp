@@ -87,7 +87,7 @@ describe("MCP stdio server (smoke)", () => {
     expect(p.pid).toBeDefined();
   });
 
-  it("responds to tools/list with all 9 tools", async () => {
+  it("responds to tools/list with all 17 tools", async () => {
     const p = startServer();
     await waitForReady(p);
     await initialize(p);
@@ -101,14 +101,20 @@ describe("MCP stdio server (smoke)", () => {
     const names = resp.result.tools.map((t: { name: string }) => t.name).sort();
     expect(names).toEqual([
       "wanderlog_add_checklist",
+      "wanderlog_add_expense",
+      "wanderlog_add_flight",
       "wanderlog_add_hotel",
       "wanderlog_add_note",
       "wanderlog_add_place",
+      "wanderlog_add_train",
+      "wanderlog_annotate_place",
       "wanderlog_create_trip",
+      "wanderlog_edit_note",
       "wanderlog_get_trip",
-      "wanderlog_get_trip_url",
       "wanderlog_list_trips",
-      "wanderlog_remove_place",
+      "wanderlog_move",
+      "wanderlog_remove",
+      "wanderlog_rename_day",
       "wanderlog_search_places",
       "wanderlog_update_trip_dates",
     ]);
@@ -152,9 +158,10 @@ describe("MCP stdio server (smoke)", () => {
     expect(resp.result).toBeDefined();
     expect(resp.result.isError).not.toBe(true);
     const text = resp.result.content[0].text;
-    // Content-agnostic: every trip shows title · dates · day count.
+    // Content-agnostic: every trip shows title · dates · day count · URL.
     expect(text).toMatch(/\d{4}-\d{2}-\d{2}\s+→\s+\d{4}-\d{2}-\d{2}/);
     expect(text).toMatch(/\d+\s+days/);
+    expect(text).toMatch(/wanderlog\.com\/plan\/\w+/);
   });
 
   it("invokes wanderlog_search_places near trip", async () => {
@@ -180,27 +187,6 @@ describe("MCP stdio server (smoke)", () => {
     expect(text.length).toBeGreaterThan(0);
   });
 
-  it("invokes wanderlog_get_trip_url and returns a valid URL", async () => {
-    const p = startServer();
-    await waitForReady(p);
-    await initialize(p);
-    const resp = await sendRequest(p, {
-      jsonrpc: "2.0",
-      id: 7,
-      method: "tools/call",
-      params: {
-        name: "wanderlog_get_trip_url",
-        arguments: {
-          trip_key: process.env.WANDERLOG_TRIP_KEY,
-          mode: "edit",
-        },
-      },
-    });
-    expect(resp.result).toBeDefined();
-    expect(resp.result.isError).not.toBe(true);
-    const text = resp.result.content[0].text;
-    expect(text).toMatch(/^https:\/\/wanderlog\.com\/plan\/\w+/);
-  });
 
   it("returns structured error for unknown trip_key", async () => {
     const p = startServer();

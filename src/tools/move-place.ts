@@ -20,7 +20,7 @@ export const movePlaceInputSchema = {
     .string()
     .min(1)
     .describe(
-      "Natural-language reference to the place to move or copy. Same syntax as wanderlog_remove_place: exact or partial name, role keywords ('the hotel'), ordinal prefix ('2nd Cafe'), day filter ('Museum on day 2').",
+      "Natural-language reference to the place to move or copy. Same syntax as wanderlog_remove: exact or partial name, role keywords ('the hotel'), ordinal prefix ('2nd Cafe'), day filter ('Museum on day 2').",
     ),
   to: z
     .string()
